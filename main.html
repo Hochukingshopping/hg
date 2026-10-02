@@ -365,7 +365,11 @@
       display: flex; align-items: center;
       pointer-events: none;
     }
-    .hero-copy { max-width: 470px; pointer-events: auto; }
+    .hero-copy { max-width: 520px; pointer-events: auto; }
+    /* 桌機：文字區靠上，下方留空間給促銷項目（試算表加幾列就往下長幾列） */
+    @media (min-width: 768px) {
+      .hero-content { align-items: flex-start; padding-top: clamp(28px, 6vh, 64px); }
+    }
     .hero h1 {
       font-size: clamp(2.1rem, 4.2vw, 3.6rem);
       font-weight: 900;
@@ -406,13 +410,22 @@
     .hero.is-ready .hero-hint { opacity: 1; }
     /* 公司介紹數字 */
     .hero-stats {
-      display: grid; grid-template-columns: auto 1fr; gap: 36px;
+      display: flex; flex-wrap: wrap; gap: 20px 36px;   /* 促銷項目多時自動換行 */
       margin: 0 0 32px; padding-top: 20px;
       border-top: 1px solid rgba(255,255,255,.12);
     }
     .hero-stats dt { font-size: 12px; font-weight: 500; color: var(--on-night-2); letter-spacing: .08em; margin-bottom: 4px; }
     .hero-stats dd { margin: 0; font-size: 15px; color: var(--on-night-2); }
     .hero-stats dd b { font-size: 40px; font-weight: 900; line-height: 1; color: var(--on-night); margin-right: 4px; font-variant-numeric: tabular-nums; }
+    .hero-stats > div > b { display: block; font-size: 14px; color: var(--on-night); margin-bottom: 6px; }
+    /* 每個促銷項目的外框：同凍結欄分頁那個膠囊大框（圓角、細白框），底色淺灰一點 */
+    .hero-stats { border-top: 0; padding-top: 0; gap: 14px; }
+    .hero-stats > div {
+      padding: 14px 28px;
+      background: rgba(255,255,255,.14);
+      border: 1px solid rgba(255,255,255,.16);
+      border-radius: var(--r-pill);
+    }
     .hero-stats .units { display: block; font-size: 13px; color: var(--on-night-2); margin-top: 8px; white-space: nowrap; }
 
     /* 直式標語：18 現正熱賣中 */
@@ -452,7 +465,8 @@
       .hero-vtag { left: 13%; top: calc(var(--stage-h) / 2); font-size: 1.2rem; letter-spacing: .22em; }
       .hero-content { height: auto; padding-top: calc(var(--stage-h) + 36px); padding-bottom: 56px; }
       .hero h1 { font-size: 2.2rem; }
-      .hero-stats { gap: 24px; margin-bottom: 24px; }
+      .hero-stats { gap: 10px; margin-bottom: 24px; }
+      .hero-stats > div { padding: 12px 22px; }
       .hero-stats dd b { font-size: 32px; }
     }
 
@@ -943,7 +957,9 @@
         <h2>促銷活動<br></h2>
         <p class="hero-sub">每月與固定活動同步進行!</p>
 <p class="hero-sub"></p>
-        <dl class="hero-stats">
+        <!-- 促銷項目：內容來自 Google 試算表（網址設定在 SHEET_URLS.promo）
+             下面這兩項是「讀不到試算表時」的備用內容 -->
+        <dl class="hero-stats" id="heroPromos">
           <div><b>新機自取折價</b><dd><b>100</b>元</dd></div>
           <div><b>榮耀X6d新機</b><dd><b>送達米機</b>乙台</dd></div>
  
@@ -1353,7 +1369,10 @@
     newPhone:  'https://docs.google.com/spreadsheets/d/e/2PACX-1vTZ-eyYXj7ugRKnEY0_a0XigyUf6Mtn44nvu6p19qcJxA_rBmwYeCVAqqMUvJek-Q/pub?output=csv',
     usedPhone: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTgYLobnsGF8DqZSa0Sb0oDtGP3jyvnbW7CL_lxAIImdJoeDpxTqlaghv8zlBjdrA/pub?output=csv',
     // 家電報價：目前這個網址的內容是中古機資料（暫代展示用），之後換成家電分頁的發布網址即可
-    appliance: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQl2U0C56wcQXQ15UJdb5_6Hx2_sy6ufuHyQbRJDCgyIhxSEMcyMWKvHOS2AoB5IQ/pub?output=csv'
+    appliance: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQl2U0C56wcQXQ15UJdb5_6Hx2_sy6ufuHyQbRJDCgyIhxSEMcyMWKvHOS2AoB5IQ/pub?output=csv',
+    // 首頁促銷項目：試算表共用設為「知道連結的任何人＝檢視者」即可讀取，不必另外發布
+    // 試算表有多個分頁時，在網址最後加 &sheet=分頁名稱
+    promo:     'https://docs.google.com/spreadsheets/d/1VN6GLgcG7lJxeyfpP6jAeqjwlAeT4mAdL9JS7KTjHIY/gviz/tq?tqx=out:csv'
   };
 
   /* 讀取 Google 試算表發布的 CSV；逾時或失敗回傳 null */
@@ -1528,6 +1547,31 @@
     document.getElementById('quotePrint').addEventListener('click', () => window.print());
     syncCollapse();
   }
+
+  /* ══════════════════════════════════════════════════════════════
+     首頁促銷項目（紅框）：改 Google 試算表就好，不用動程式
+     試算表格式（第 1 列是表頭，第 2 列起每一列 = 一個促銷項目）：
+       A 欄 標題   ｜ B 欄 大字    ｜ C 欄 單位
+       新機自取折價 ｜ 100         ｜ 元
+       榮耀X6d新機  ｜ 送達米機     ｜ 乙台
+     - 加一列 = 多一個項目；刪掉該列 = 下架
+     - 整列留空會被略過；B 欄空白的列也不顯示
+     - 建議最多 6 項，太多會超出首頁畫面
+     - 讀不到試算表時，保留 HTML 裡原本寫的備用內容
+     ══════════════════════════════════════════════════════════════ */
+  (async function initPromos() {
+    const box = document.getElementById('heroPromos');
+    if (!box || !SHEET_URLS.promo) return;
+    const rows = await fetchSheet(SHEET_URLS.promo);
+    if (!rows) return;
+    const clean = v => (v || '').replace(/\s+/g, ' ').trim();
+    let data = rows.map(r => r.map(clean)).filter(r => r.some(Boolean));
+    if (data.length && /標題|項目|名稱|活動|大字|單位/.test(data[0].join('')) ) data = data.slice(1);
+    data = data.filter(r => r[1]);
+    if (!data.length) return;
+    box.innerHTML = data.map(r =>
+      `<div><b>${escHTML(r[0] || '')}</b><dd><b>${escHTML(r[1])}</b>${escHTML(r[2] || '')}</dd></div>`).join('');
+  })();
 
   /* 先讀雲端；失敗時用頁面內嵌的備份資料（Tab 分隔） */
   (async function initQuote() {
