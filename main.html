@@ -328,8 +328,8 @@
     /* ============ Hero：全螢幕 3D（GLB 模型） ============ */
     .hero {
       position: relative;
-      height: calc(100dvh - var(--nav-h));
-      min-height: 560px;
+      height: auto;   /* 促銷項目多時整塊往下長，不會被切掉 */
+      min-height: max(560px, calc(100dvh - var(--nav-h)));
       background: var(--night);
       color: var(--on-night);
       overflow: hidden;
@@ -368,7 +368,7 @@
     .hero-copy { max-width: 520px; pointer-events: auto; }
     /* 桌機：文字區靠上，下方留空間給促銷項目（試算表加幾列就往下長幾列） */
     @media (min-width: 768px) {
-      .hero-content { align-items: flex-start; padding-top: clamp(28px, 6vh, 64px); }
+      .hero-content { align-items: flex-start; padding-top: clamp(28px, 6vh, 64px); padding-bottom: 72px; min-height: inherit; height: auto; }
     }
     .hero h1 {
       font-size: clamp(2.1rem, 4.2vw, 3.6rem);
@@ -419,9 +419,11 @@
     .hero-stats dd b { font-size: 40px; font-weight: 900; line-height: 1; color: var(--on-night); margin-right: 4px; font-variant-numeric: tabular-nums; }
     .hero-stats > div > b { display: block; font-size: 14px; color: var(--on-night); margin-bottom: 6px; }
     /* 每個促銷項目的外框：同凍結欄分頁那個膠囊大框（圓角、細白框），底色淺灰一點 */
-    .hero-stats { border-top: 0; padding-top: 0; gap: 14px; }
+    /* 促銷項目：固定 2 欄、最多 4 列（8 項），多的不顯示 */
+    .hero-stats { border-top: 0; padding-top: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+    .hero-stats dd b { font-size: 32px; }
     .hero-stats > div {
-      padding: 14px 28px;
+      padding: 12px 24px; min-width: 0;
       background: rgba(255,255,255,.14);
       border: 1px solid rgba(255,255,255,.16);
       border-radius: var(--r-pill);
@@ -466,8 +468,9 @@
       .hero-content { height: auto; padding-top: calc(var(--stage-h) + 36px); padding-bottom: 56px; }
       .hero h1 { font-size: 2.2rem; }
       .hero-stats { gap: 10px; margin-bottom: 24px; }
-      .hero-stats > div { padding: 12px 22px; }
-      .hero-stats dd b { font-size: 32px; }
+      .hero-stats > div { padding: 12px 16px; }
+      .hero-stats > div > b { font-size: 13px; }
+      .hero-stats dd b { font-size: 24px; }
     }
 
     /* ============ Section base ============ */
@@ -1372,7 +1375,12 @@
     appliance: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQl2U0C56wcQXQ15UJdb5_6Hx2_sy6ufuHyQbRJDCgyIhxSEMcyMWKvHOS2AoB5IQ/pub?output=csv',
     // 首頁促銷項目：試算表共用設為「知道連結的任何人＝檢視者」即可讀取，不必另外發布
     // 試算表有多個分頁時，在網址最後加 &sheet=分頁名稱
-    promo:     'https://docs.google.com/spreadsheets/d/1VN6GLgcG7lJxeyfpP6jAeqjwlAeT4mAdL9JS7KTjHIY/gviz/tq?tqx=out:csv'
+    // 依序嘗試，前一個讀不到才試下一個；第一個是「發布到網路」的 CSV（最穩），後兩個是備援
+    promo: [
+      'https://docs.google.com/spreadsheets/d/e/2PACX-1vSuo6fcQrgM_5SjxdrpO0cv7Sc-zsMd0IXGO7VbOwLR7yFfzCo7efGdWRAIjLoq847ArcDhu6Unm0RX/pub?output=csv',
+      'https://docs.google.com/spreadsheets/d/1VN6GLgcG7lJxeyfpP6jAeqjwlAeT4mAdL9JS7KTjHIY/gviz/tq?tqx=out:csv',
+      'https://docs.google.com/spreadsheets/d/1VN6GLgcG7lJxeyfpP6jAeqjwlAeT4mAdL9JS7KTjHIY/export?format=csv'
+    ]
   };
 
   /* 讀取 Google 試算表發布的 CSV；逾時或失敗回傳 null */
@@ -1388,7 +1396,7 @@
     } catch (err) {
       console.warn('[試算表] 讀取失敗', url, err);
       window.hgTrack?.('sheet_load_error', {
-        sheet: Object.keys(SHEET_URLS).find(k => SHEET_URLS[k] === url) || 'unknown',
+        sheet: Object.keys(SHEET_URLS).find(k => [].concat(SHEET_URLS[k]).includes(url)) || 'unknown',
         reason: String(err?.message || err).slice(0, 100)
       });
       return null;
@@ -1556,18 +1564,19 @@
        榮耀X6d新機  ｜ 送達米機     ｜ 乙台
      - 加一列 = 多一個項目；刪掉該列 = 下架
      - 整列留空會被略過；B 欄空白的列也不顯示
-     - 建議最多 6 項，太多會超出首頁畫面
+     - 版面固定 2 欄、最多 4 列＝最多 8 項；第 9 項起不顯示
      - 讀不到試算表時，保留 HTML 裡原本寫的備用內容
      ══════════════════════════════════════════════════════════════ */
   (async function initPromos() {
     const box = document.getElementById('heroPromos');
     if (!box || !SHEET_URLS.promo) return;
-    const rows = await fetchSheet(SHEET_URLS.promo);
+    let rows = null;
+    for (const url of [].concat(SHEET_URLS.promo)) { rows = await fetchSheet(url); if (rows) break; }
     if (!rows) return;
     const clean = v => (v || '').replace(/\s+/g, ' ').trim();
     let data = rows.map(r => r.map(clean)).filter(r => r.some(Boolean));
     if (data.length && /標題|項目|名稱|活動|大字|單位/.test(data[0].join('')) ) data = data.slice(1);
-    data = data.filter(r => r[1]);
+    data = data.filter(r => r[1]).slice(0, 8);   // 2 欄 × 最多 4 列
     if (!data.length) return;
     box.innerHTML = data.map(r =>
       `<div><b>${escHTML(r[0] || '')}</b><dd><b>${escHTML(r[1])}</b>${escHTML(r[2] || '')}</dd></div>`).join('');
