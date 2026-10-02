@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- 上傳到 repo 根目錄（與 main.html 同一層），再到 Google Search Console →「Sitemap」提交：
+     https://hochukingshopping.github.io/hg/sitemap.xml
+     網址改名或改網域時，這裡的 <loc> 要一起改 -->
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>https://hochukingshopping.github.io/hg/main.html</loc>
+    <lastmod>2026-10-02</lastmod>
+  </url>
+  <url>
+    <loc>https://hochukingshopping.github.io/hg/index.html</loc>
+    <lastmod>2026-10-02</lastmod>
+  </url>
+</urlset>
