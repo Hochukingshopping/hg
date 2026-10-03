@@ -1203,7 +1203,7 @@
       const ext = /^https?:/.test(href);
       return `<a class="line-item${r.url ? '' : ' is-pending'}" role="menuitem" href="${e(href)}"${ext ? ' target="_blank" rel="noopener"' : ''}>
         <span class="line-item-icon"><i class="ph-bold ph-chat-circle-dots"></i></span>
-        <span><b>${e(r.name)}</b>${r.area || !r.url ? `<small>${e(r.area)}</small>` : ''}</span>
+        <span><b>${e(r.name)}</b>${r.area || !r.url ? `<small>${e(r.area).replace(/&lt;br\s*\/?&gt;/gi, '<br>')}</small>` : ''}</span>
         <i class="ph-bold ph-arrow-up-right go"></i>
       </a>`;
     }).join(''); }
