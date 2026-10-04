@@ -404,6 +404,22 @@
     }
     .ship-cutoff-head span { color: var(--on-night-2); font-weight: 500; margin-left: auto; letter-spacing: 0; }
     .ship-cutoff ul { list-style: none; margin: 0; padding: 4px 18px; }
+    /* 營業時間：膠囊資訊列 */
+    .biz-hours {
+      margin-top: 28px;
+      display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
+      font-size: 15px; color: var(--on-night-2);   /* 與出貨表的地區文字同大小 */
+    }
+    .biz-hours-label { display: inline-flex; align-items: center; gap: 6px; font-weight: 700; color: var(--on-night); margin-right: 4px; }
+    .biz-hours-label i { color: var(--accent); }
+    .biz-hours-item {
+      padding: 6px 14px; border-radius: var(--r-pill);
+      background: rgba(255,255,255,.08);
+    }
+    .biz-hours-item b { color: var(--on-night); font-size: 20px; font-weight: 900; font-variant-numeric: tabular-nums; margin-left: 4px; }   /* 與出貨時間同大小、同粗細 */
+    .biz-hours + .ship-cutoff { margin-top: 14px; }
+    .biz-hours-item { white-space: nowrap; }
+    .biz-hours-label { flex-basis: 100%; }   /* 標題自成一行，兩個時段在下一行並排（窄螢幕自動上下排） */
     .ship-cutoff li {
       display: flex; align-items: baseline; justify-content: space-between; gap: 16px;
       padding: 9px 0; font-size: 15px; color: var(--on-night);
@@ -993,6 +1009,12 @@
         <div class="hero-ctas">
           <a class="btn btn-accent" href="#phone">新機報價單</a>
           <a class="btn btn-accent" href="#sim">門號公表</a>
+        </div>
+        <!-- 營業時間：一條橫向資訊列（與下方出貨卡片刻意用不同形式，避免混在一起） -->
+        <div class="biz-hours" aria-label="營業時間">
+          <span class="biz-hours-label"><i class="ph-bold ph-clock"></i>營業時間</span>
+          <span class="biz-hours-item">週一～週六 <b>12:00–20:00</b></span>
+          <span class="biz-hours-item">週日 <b>13:00–17:00</b></span>
         </div>
         <!-- 當日出貨截止時間：改時間或地區直接改下面的 <li> -->
         <div class="ship-cutoff" aria-label="當日出貨截止時間">
