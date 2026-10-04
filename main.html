@@ -474,7 +474,9 @@
     /* 直式標語：18 現正熱賣中 */
     .hero-vtag {
       position: absolute; z-index: 2;
-      left: 47%; top: 50%; transform: translate(-50%, -50%);
+      /* 至少在左側文字區（最寬 520px）右邊再空約 50px（88px 含直排字一半寬），才不會壓到促銷項目；畫面夠寬時維持在 47% */
+      left: max(47%, calc(max((100vw - 1200px) / 2, 0px) + 24px + 520px + 88px));
+      top: 50%; transform: translate(-50%, -50%);
       writing-mode: vertical-rl;
       font-size: clamp(1.6rem, 2.6vw, 2.4rem);
       font-weight: 900; letter-spacing: .32em;
@@ -490,7 +492,8 @@
       font-size: 1.5em; letter-spacing: 0;
       margin-bottom: .35em;
     }
-    @media (max-width: 1100px) { .hero-vtag { left: 45%; } }
+    /* 901～1199px：左側文字區與手機之間放不下直排字，避免壓到手機或促銷，先隱藏（≤900 是手機版排版，另有位置） */
+    @media (min-width: 901px) and (max-width: 1199px) { .hero-vtag { display: none; } }
 
     @media (max-width: 900px) {
       /* 手機版：上方固定高度 3D 展示區，下方接文字，不互相覆蓋 */
