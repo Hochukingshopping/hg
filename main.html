@@ -391,6 +391,27 @@
       margin: 0 0 32px;
     }
     .hero-ctas { display: flex; flex-wrap: wrap; gap: 12px; }
+    /* 當日出貨截止時間（首頁左下） */
+    .ship-cutoff {
+      margin-top: 28px; max-width: 400px;
+      border: 1px solid rgba(255,255,255,.12); border-radius: 16px;
+      background: rgba(255,255,255,.04); overflow: hidden;
+    }
+    .ship-cutoff-head {
+      display: flex; align-items: center; gap: 8px;
+      padding: 10px 18px; font-size: 13px; font-weight: 700; color: var(--accent);
+      border-bottom: 1px solid rgba(255,255,255,.08); letter-spacing: .04em;
+    }
+    .ship-cutoff-head span { color: var(--on-night-2); font-weight: 500; margin-left: auto; letter-spacing: 0; }
+    .ship-cutoff ul { list-style: none; margin: 0; padding: 4px 18px; }
+    .ship-cutoff li {
+      display: flex; align-items: baseline; justify-content: space-between; gap: 16px;
+      padding: 9px 0; font-size: 15px; color: var(--on-night);
+    }
+    .ship-cutoff li + li { border-top: 1px solid rgba(255,255,255,.06); }
+    .ship-cutoff time { font-size: 20px; font-weight: 900; font-variant-numeric: tabular-nums; color: var(--on-night); white-space: nowrap; }
+    .ship-cutoff time small { font-size: 12px; font-weight: 500; color: var(--on-night-2); margin-left: 4px; }
+    @media (max-width: 767px) { .ship-cutoff { max-width: none; } }
     /* 3D 模型下方：拖曳提示 + 商標聲明 */
     .hero-under {
       position: absolute; z-index: 3;
@@ -972,6 +993,15 @@
         <div class="hero-ctas">
           <a class="btn btn-accent" href="#phone">新機報價單</a>
           <a class="btn btn-accent" href="#sim">門號公表</a>
+        </div>
+        <!-- 當日出貨截止時間：改時間或地區直接改下面的 <li> -->
+        <div class="ship-cutoff" aria-label="當日出貨截止時間">
+          <div class="ship-cutoff-head"><i class="ph-bold ph-truck"></i>當日出貨<span>截止前下單，當天安排出貨</span></div>
+          <ul>
+            <li>大台中區<time>18:30<small>前</small></time></li>
+            <li>彰化市<time>16:00<small>前</small></time></li>
+            <li>南投縣市・以外縣市<time>15:30<small>前</small></time></li>
+          </ul>
         </div>
       </div>
     </div>
