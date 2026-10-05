@@ -1063,7 +1063,7 @@
 
       <div class="steps reveal">
         <div class="step"><i class="ph ph-identification-card"></i><b>促案選擇更新</b><span>請洽內勤業務</span></div>
-        <div class="step"><i class="ph ph-list-checks"></i><b>禾鉅系統網址</b><div><a class="btn btn-accent" href="http://shoppingking.com.tw/Telecom/Account/Login?ReturnUrl=%2FTelecom%2F">點我去禾鉅系統</a></div>
+        <div class="step"><i class="ph ph-list-checks"></i><b>禾鉅系統網址</b><div><a class="btn btn-accent" href="http://shoppingking.com.tw/Telecom/Account/Login?ReturnUrl=%2FTelecom%2F" target="_blank" rel="noopener noreferrer">點我去禾鉅系統</a></div>
 </div>
         <div class="step"><i class="ph ph-storefront"></i><b>中華紙本件</b><span>續約作業僅周一至周五，假日無續約作業。<br>周一至周六當天下午4點前通知派車收件<br>黑貓會於當日過去收件。</span></div>
     </div>
@@ -2185,7 +2185,4 @@ function start() {
 function kick() { start(); }
 function stop() { running = false; }
 new IntersectionObserver(([e]) => { visible = e.isIntersecting; visible ? start() : stop(); }).observe(hero);
-document.addEventListener('visibilitychange', () => document.hidden ? stop() : start());
-</script>
-</body>
-</html>
+document.addEventListener('visibilitychange', () => document.hidden ? sto
