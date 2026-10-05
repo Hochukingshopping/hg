@@ -1043,8 +1043,8 @@
       <div class="sec-head reveal">
         
         <h2>遠傳、中華電信<br></h2>
-        <!-- 更新日期讀 Google 試算表（SHEET_URLS.simDate）；讀不到時顯示這裡寫的日期 -->
-        <p>最新更新日期 <span id="simDate">2026/10/1</span></p>
+        <!-- 更新日期讀 Google 試算表（SHEET_URLS.simDate）；讀不到時顯示上次讀到的日期，沒有紀錄則顯示「—」 -->
+        <p>最新更新日期 <span id="simDate">讀取中…</span></p>
       </div>
 
       <div class="carrier reveal">
@@ -1646,15 +1646,23 @@
 
   /* 門號公版更新日期：取試算表裡第一個「不是表頭」的非空儲存格（優先找日期格式） */
   /* 門號公版（佣金圖）更新日期：讀 SHEET_URLS.simDate 試算表，隨雲端更動
-     取第一個「不是表頭」的非空儲存格（優先找日期格式）；讀不到時保留 HTML 裡寫的日期 */
+     取第一個「不是表頭」的非空儲存格（優先找日期格式） */
   (async function initSimDate() {
     const el = document.getElementById('simDate');
-    if (!el || !SHEET_URLS.simDate) return;
-    const rows = await fetchSheet(SHEET_URLS.simDate);
-    if (!rows) return;
-    const cells = rows.flat().map(v => (v || '').trim()).filter(v => v && !/更新日期|日期/.test(v));
-    const val = cells.find(v => /\d{2,4}[\/\-.年]\d{1,2}/.test(v)) || cells[0];
-    if (val) el.textContent = val;
+    if (!el) return;
+    /* 先顯示上次讀到的日期（存在瀏覽器裡），避免先閃舊日期再跳新日期；沒有紀錄就顯示「讀取中…」 */
+    const KEY = 'hg_simDate';
+    let cached = null;
+    try { cached = localStorage.getItem(KEY); } catch (e) {}
+    if (cached) el.textContent = cached;
+    const rows = SHEET_URLS.simDate ? await fetchSheet(SHEET_URLS.simDate) : null;
+    let val = '';
+    if (rows) {
+      const cells = rows.flat().map(v => (v || '').trim()).filter(v => v && !/更新日期|日期/.test(v));
+      val = cells.find(v => /\d{2,4}[\/\-.年]\d{1,2}/.test(v)) || cells[0] || '';
+    }
+    if (val) { el.textContent = val; try { localStorage.setItem(KEY, val); } catch (e) {} }
+    else if (!cached) el.textContent = '—';   // 讀不到又沒紀錄：顯示「—」，不顯示可能過期的日期
   })();
 
   /* 先讀雲端；失敗時用頁面內嵌的備份資料（Tab 分隔） */
