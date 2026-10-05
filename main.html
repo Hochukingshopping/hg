@@ -1482,6 +1482,9 @@
     return rows;
   }
   const escHTML = t => String(t).replace(/[&<>"]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
+  /* 今天日期（台灣時區），格式 2026/10/05；手機報價、門號公版、中古機的「更新日期」一律顯示今天 */
+  const todayTW = () => new Intl.DateTimeFormat('zh-TW', { timeZone: 'Asia/Taipei', year: 'numeric', month: '2-digit', day: '2-digit' })
+    .format(new Date()).replace(/-/g, '/');
 
   /* ── 新機現金報價單 ──
      左半部 A~E 欄、右半部 G~J 欄各自是一份清單，桌機版照試算表左右兩欄排版 */
@@ -1540,7 +1543,7 @@
       root.querySelector('.quote-body').innerHTML = '<div class="quote-error">報價資料格式無法辨識：請確認試算表欄位順序與原本相同（A~E 左半、G~J 右半）。</div>';
       return;
     }
-    document.getElementById('quoteDate').textContent = date || '未標示';
+    document.getElementById('quoteDate').textContent = todayTW();   // 改顯示今天日期（試算表 A1 的日期不再顯示）
     document.getElementById('quoteSource').textContent = source;
     document.getElementById('quoteCount').textContent = total;
 
@@ -1642,18 +1645,15 @@
   })();
 
   /* 門號公版更新日期：取試算表裡第一個「不是表頭」的非空儲存格（優先找日期格式） */
-  (async function initSimDate() {
+  /* 改為一律顯示今天日期；SHEET_URLS.simDate 的試算表目前不再讀取 */
+  (function initSimDate() {
     const el = document.getElementById('simDate');
-    if (!el || !SHEET_URLS.simDate) return;
-    const rows = await fetchSheet(SHEET_URLS.simDate);
-    if (!rows) return;
-    const cells = rows.flat().map(v => (v || '').trim()).filter(v => v && !/更新日期|日期/.test(v));
-    const val = cells.find(v => /\d{2,4}[\/\-.年]\d{1,2}/.test(v)) || cells[0];
-    if (val) el.textContent = val;
+    if (el) el.textContent = todayTW();
   })();
 
   /* 先讀雲端；失敗時用頁面內嵌的備份資料（Tab 分隔） */
   (async function initQuote() {
+    const qd = document.getElementById('quoteDate'); if (qd) qd.textContent = todayTW();   // 不論雲端是否讀到，都先顯示今天日期
     const cloud = await fetchSheet(SHEET_URLS.newPhone);
     if (cloud && cloud.length > 3) {
       renderQuote(cloud, '雲端即時資料');
@@ -1704,7 +1704,7 @@
     const LIMIT = opt.limit || 15;   // 預設顯示筆數，其餘按「顯示全部」展開
     box.innerHTML = `
       <div class="us-head">
-        <div class="us-meta">${date ? `更新日期 <b>${escHTML(date)}</b>` : '雲端即時資料'}<span>共 <b>${body.length}</b> 筆</span></div>
+        <div class="us-meta">${(opt.today || date) ? `更新日期 <b>${escHTML(opt.today ? todayTW() : date)}</b>` : '雲端即時資料'}<span>共 <b>${body.length}</b> 筆</span></div>
         <input class="us-search" type="search" placeholder="${opt.placeholder}" aria-label="${opt.placeholder}">
       </div>
       <div class="us-scroll">
@@ -1743,7 +1743,7 @@
 
   /* 依 SHEET_URLS 載入各區表格；網址留空的區塊不會顯示 */
   [
-    { id: 'usedSheet', url: SHEET_URLS.usedPhone, placeholder: '搜尋機型、容量',
+    { id: 'usedSheet', url: SHEET_URLS.usedPhone, placeholder: '搜尋機型、容量', today: true,   // today：更新日期顯示今天
       failText: '中古機清單暫時無法載入，請來電或 LINE 詢問現有機型。', emptyText: '目前沒有中古機資料。' },
     { id: 'homeSheet', url: SHEET_URLS.appliance, placeholder: '搜尋家電品牌、型號',
       failText: '家電報價暫時無法載入，請來電或 LINE 詢問。', emptyText: '目前沒有家電報價資料。' }
@@ -2186,6 +2186,25 @@ function kick() { start(); }
 function stop() { running = false; }
 new IntersectionObserver(([e]) => { visible = e.isIntersecting; visible ? start() : stop(); }).observe(hero);
 document.addEventListener('visibilitychange', () => document.hidden ? stop() : start());
+</script>
+<!-- ══ 頁面放太久自動重新整理：避免雲端報價更新了，畫面還是舊的 ══
+     條件（任一成立）：開啟超過 12 小時，或已經跨日（過了午夜，日期會不對）
+     時機：使用者切回這個分頁時立刻重整；分頁一直開著時，每分鐘檢查一次，
+           且使用者 5 分鐘內沒有任何操作才重整（避免正在搜尋或填資料時被打斷） -->
+<script>
+(() => {
+  const MAX_AGE = 12 * 60 * 60 * 1000, IDLE = 5 * 60 * 1000;
+  const loadedAt = Date.now();
+  const day = () => new Intl.DateTimeFormat('zh-TW', { timeZone: 'Asia/Taipei', dateStyle: 'short' }).format(new Date());
+  const loadedDay = day();
+  let lastAct = Date.now();
+  ['pointerdown', 'keydown', 'wheel', 'touchstart', 'scroll'].forEach(ev => addEventListener(ev, () => { lastAct = Date.now(); }, { passive: true }));
+  const stale = () => Date.now() - loadedAt > MAX_AGE || day() !== loadedDay;
+  const reload = () => location.reload();
+  document.addEventListener('visibilitychange', () => { if (!document.hidden && stale()) reload(); });
+  addEventListener('pageshow', e => { if (e.persisted && stale()) reload(); });   // 從上一頁快取回來時
+  setInterval(() => { if (stale() && Date.now() - lastAct > IDLE) reload(); }, 60 * 1000);
+})();
 </script>
 </body>
 </html>
