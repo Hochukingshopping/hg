@@ -1482,7 +1482,7 @@
     return rows;
   }
   const escHTML = t => String(t).replace(/[&<>"]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
-  /* 今天日期（台灣時區），格式 2026/10/05；手機報價、門號公版、中古機的「更新日期」一律顯示今天 */
+  /* 今天日期（台灣時區），格式 2026/10/05；手機報價、中古機的「更新日期」顯示今天（門號公版改回讀試算表） */
   const todayTW = () => new Intl.DateTimeFormat('zh-TW', { timeZone: 'Asia/Taipei', year: 'numeric', month: '2-digit', day: '2-digit' })
     .format(new Date()).replace(/-/g, '/');
 
@@ -1645,10 +1645,16 @@
   })();
 
   /* 門號公版更新日期：取試算表裡第一個「不是表頭」的非空儲存格（優先找日期格式） */
-  /* 改為一律顯示今天日期；SHEET_URLS.simDate 的試算表目前不再讀取 */
-  (function initSimDate() {
+  /* 門號公版（佣金圖）更新日期：讀 SHEET_URLS.simDate 試算表，隨雲端更動
+     取第一個「不是表頭」的非空儲存格（優先找日期格式）；讀不到時保留 HTML 裡寫的日期 */
+  (async function initSimDate() {
     const el = document.getElementById('simDate');
-    if (el) el.textContent = todayTW();
+    if (!el || !SHEET_URLS.simDate) return;
+    const rows = await fetchSheet(SHEET_URLS.simDate);
+    if (!rows) return;
+    const cells = rows.flat().map(v => (v || '').trim()).filter(v => v && !/更新日期|日期/.test(v));
+    const val = cells.find(v => /\d{2,4}[\/\-.年]\d{1,2}/.test(v)) || cells[0];
+    if (val) el.textContent = val;
   })();
 
   /* 先讀雲端；失敗時用頁面內嵌的備份資料（Tab 分隔） */
