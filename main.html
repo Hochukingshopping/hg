@@ -178,13 +178,12 @@
     .nav {
       position: sticky; top: 0; z-index: 1000;
       height: var(--nav-h);
-      background: rgba(11, 11, 12, .94);
-      backdrop-filter: saturate(180%) blur(20px);
-      -webkit-backdrop-filter: saturate(180%) blur(20px);
+      /* 效能：拿掉毛玻璃（backdrop-filter）。底下的 3D 每一幀都在動，毛玻璃要每幀重算模糊，
+         而底色已經 96% 不透明，模糊幾乎看不出來 */
+      background: rgba(11, 11, 12, .96);
       border-bottom: 1px solid rgba(255,255,255,.08);
       color: var(--on-night);
     }
-    @supports not (backdrop-filter: blur(1px)) { .nav { background: var(--night); } }
     .nav-inner {
       height: 100%;
       display: grid;
@@ -226,14 +225,18 @@
     .tab.is-active {
       color: #031414; background: var(--accent);
       border-color: var(--accent); font-weight: 700;
-      animation: tabGlow 2.4s ease-in-out infinite;   /* 節奏與搜尋欄、18 一致 */
+      box-shadow: 0 0 6px rgba(0,200,200,.45);   /* 底光（靜態） */
     }
-    @keyframes tabGlow {
-      0%, 100% { box-shadow: 0 0 6px rgba(0,200,200,.45), 0 0 0 0 rgba(0,200,200,0); }
-      50%      { box-shadow: 0 0 18px rgba(0,200,200,.9), 0 0 36px rgba(0,200,200,.45); }
+    /* 呼吸光：光暈畫在 ::after 上，動畫只改透明度 → 由顯示卡合成，不必每幀重繪陰影 */
+    .tab.is-active::after {
+      content: ""; position: absolute; inset: -1px; border-radius: inherit; pointer-events: none;
+      box-shadow: 0 0 18px rgba(0,200,200,.9), 0 0 36px rgba(0,200,200,.45);
+      opacity: 0; animation: glowPulse 2.4s ease-in-out infinite;
+      will-change: opacity;
     }
+    @keyframes glowPulse { 0%, 100% { opacity: 0; } 50% { opacity: 1; } }
     @media (prefers-reduced-motion: reduce) {
-      .tab.is-active { animation: none; box-shadow: 0 0 14px rgba(0,200,200,.6); }
+      .tab.is-active::after { animation: none; opacity: .5; }
     }
     .nav-cta { justify-self: end; }
 
@@ -310,6 +313,9 @@
     .btn-ghost-dark:hover { background: rgba(255,255,255,.1); color: var(--on-night); }
     .btn-ink { background: var(--ink); color: var(--canvas); }
     .btn-ink:hover { opacity: .88; color: var(--canvas); }
+    /* 青色外框按鈕（次要動作）：與主要的青色實心按鈕同色系 */
+    .btn-outline-accent { background: transparent; color: var(--accent); border: 1.5px solid var(--accent); }
+    .btn-outline-accent:hover { background: rgba(0,200,200,.12); color: var(--accent); }
 
     /* 手機版：上排 logo + 電話，下排四個分頁等寬 */
     @media (max-width: 767px) {
@@ -343,6 +349,8 @@
       opacity: 0; transition: opacity 1.2s var(--ease);
     }
     .hero.is-ready .hero-canvas { opacity: 1; }
+    /* 效能：桌機 3D 畫布只放在右側 60%（手機在 70% 位置），少畫約 40% 像素；手機版另有設定 */
+    @media (min-width: 901px) { .hero-canvas { left: 40%; width: 60%; } }
     /* 邊緣漸層：四周壓暗到底色，底部淡出，讓 3D 與頁面黑色無縫融合 */
     .hero-vignette {
       position: absolute; inset: 0; pointer-events: none;
@@ -589,8 +597,24 @@
       opacity: 0; transition: opacity .25s var(--ease);
     }
     .carrier-img:hover .carrier-img-hint { opacity: 1; }
-    .carrier-img-error { display: none; padding: 32px 16px; text-align: center; color: #333; font-size: 14px; }
-    .carrier-img.is-missing { cursor: pointer; }
+    .carrier-img-error {
+      display: none; padding: 40px 20px; text-align: center;
+      color: var(--on-night-2); font-size: 14px; line-height: 1.7;
+    }
+    .carrier-img-error i { display: block; font-size: 28px; color: var(--on-night-2); margin-bottom: 8px; }
+    .carrier-img-error b { display: block; color: var(--on-night); font-size: 15px; }
+    .carrier-img-retry {
+      display: flex; width: max-content; align-items: center; gap: 6px; margin: 14px auto 0;   /* 自成一行置中 */
+      padding: 8px 16px; border-radius: var(--r-pill);
+      border: 1px solid rgba(0,200,200,.6); color: var(--accent); font-weight: 600; font-size: 13px;
+      transition: background .2s var(--ease);
+    }
+    .carrier-img-retry:hover { background: rgba(0,200,200,.12); }
+    /* 讀取失敗：改成深色虛線框，不再出現刺眼的白色方塊 */
+    .carrier-img.is-missing {
+      cursor: pointer; background: rgba(255,255,255,.03);
+      border: 1px dashed rgba(255,255,255,.18);
+    }
     .carrier-img.is-missing img, .carrier-img.is-missing .carrier-img-hint { display: none; }
     .carrier-img.is-missing .carrier-img-error { display: block; }
     @media (hover: none) { .carrier-img-hint { opacity: 1; } }   /* 手機沒有滑鼠，提示常駐 */
@@ -601,12 +625,17 @@
     .svc-list span { color: var(--on-night-2); font-size: 14px; line-height: 1.6; }
     .panel-fade { animation: panelIn .45s var(--ease); }
     @keyframes panelIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+    /* 三張等高卡片；卡片內容由上往下排，按鈕固定貼齊卡片底部 */
     .steps {
       display: grid; grid-template-columns: repeat(3, 1fr);
-      gap: 0; margin-top: 56px;
-      border-top: 1px solid var(--hairline);
+      gap: 16px; margin-top: 56px; align-items: stretch;
     }
-    .step { padding: 24px 24px 0 0; }
+    .step {
+      display: flex; flex-direction: column;
+      padding: 24px; border-radius: 16px;
+      background: rgba(255,255,255,.04); border: 1px solid var(--hairline);
+    }
+    .step > div { margin-top: auto; padding-top: 16px; }   /* 放按鈕的那一格推到底部 */
     .step b { font-size: 17px; display: block; margin-bottom: 6px; }
     .step span { font-size: 14px; color: var(--ink-2); line-height: 1.6; }
     .step i { font-size: 22px; color: var(--accent-ink); display: block; margin-bottom: 12px; }
@@ -615,8 +644,8 @@
       .carrier-switch { flex-direction: row; }
       .carrier-btn { flex: 1; padding: 18px; }
       .carrier-panel { padding: 28px 24px; min-height: 0; }
-      .steps { grid-template-columns: 1fr; }
-      .step { padding: 20px 0 0; }
+      .steps { grid-template-columns: 1fr; gap: 12px; }
+      .step { padding: 20px; }
     }
 
     /* ============ 手機：新機現金報價單 ============ */
@@ -648,7 +677,9 @@
     .quote-search, .us-search {
       border-color: rgba(0,200,200,.55);
       animation: searchGlow 2.4s ease-in-out infinite;
+      animation-play-state: paused;   /* 效能：預設暫停，捲到畫面上（.glow-on）才播放 */
     }
+    .quote-search.glow-on, .us-search.glow-on { animation-play-state: running; }
     .quote-search:focus, .quote-search:not(:placeholder-shown),
     .us-search:focus, .us-search:not(:placeholder-shown) {
       animation: none;
@@ -723,7 +754,14 @@
       font-size: 12px; color: var(--ink-3); line-height: 1.7;
       background: var(--parchment);
     }
-    .quote-error { padding: 24px 32px; color: #b42318; font-size: 14px; }
+    .quote-error {
+      grid-column: 1 / -1;   /* 報價區是左右兩欄，錯誤提示要橫跨整個寬度置中 */
+      display: flex; flex-direction: column; align-items: center; gap: 8px;
+      padding: 48px 24px; text-align: center; color: var(--on-night-2); font-size: 14px; line-height: 1.7;
+    }
+    .quote-error i { font-size: 32px; color: var(--accent); }
+    .quote-error b { color: var(--on-night); font-size: 17px; }
+    .quote-error .btn { margin-top: 8px; }
     /* 收合：預設只露出約一屏，底部淡出；篩選或搜尋時自動展開 */
     .quote.is-collapsed .quote-body {
       max-height: 920px; overflow: hidden;
@@ -893,6 +931,7 @@
     }
     .btn-xl i { transition: transform .3s var(--ease); }
     .btn-xl:hover { transform: translateY(-2px); box-shadow: 0 16px 34px rgba(20, 30, 40, .28); }
+    .btn-xl.btn-outline-accent, .btn-xl.btn-outline-accent:hover { box-shadow: none; }
     .btn-xl:hover i { transform: translateX(4px); }
     @media (max-width: 767px) {
       .home-feature { gap: 24px; }
@@ -1159,7 +1198,7 @@
         </a>
         <!-- 家電報價表：資料來自 Google 試算表（網址設定在 SHEET_URLS.appliance） -->
         <div class="used-sheet home-sheet" id="homeSheet"><div class="us-msg">家電報價載入中…</div></div>
-        <a class="btn btn-ink btn-xl home-all" href="https://hochukingshopping.github.io/hg/index.html">
+        <a class="btn btn-outline-accent btn-xl home-all" href="https://hochukingshopping.github.io/hg/index.html">
           看全部家電 <i class="ph-bold ph-arrow-right"></i>
         </a>
       </div>
@@ -1368,8 +1407,8 @@
      注意：雲端檔案的共用權限必須是「知道連結的任何人」。
      ══════════════════════════════════════════════════════════════ */
   const CARRIER_IMAGES = {
-    fet: 'https://drive.google.com/file/d/1fhxncK1QiaeGkgDG6U-Td0W765nKEuFG/view?usp=sharing',
-      };
+    // fet: 'https://drive.google.com/file/d/1fhxncK1QiaeGkgDG6U-Td0W765nKEuFG/view?usp=sharing',   // 要恢復遠傳佣金圖就把這行開頭的 // 拿掉
+  };
   const driveId = url => (url.match(/\/d\/([\w-]{20,})/) || url.match(/[?&]id=([\w-]{20,})/) || [])[1];
   function carrierImage(key) {
     const link = CARRIER_IMAGES[key];
@@ -1383,7 +1422,12 @@
         <img src="${src}" alt="${CARRIERS[key].title} 公版佣金表" loading="lazy" decoding="async"
              onerror="if(!this.dataset.retry){this.dataset.retry=1;this.src='${alt}';}else{this.closest('.carrier-img').classList.add('is-missing');}">
         <span class="carrier-img-hint"><i class="ph ph-magnifying-glass-plus"></i> 點擊放大</span>
-        <span class="carrier-img-error">圖片暫時無法顯示，點此開啟雲端原圖</span>
+        <span class="carrier-img-error">
+          <i class="ph ph-image-broken"></i>
+          <b>佣金圖暫時無法顯示</b>點整個框可開啟雲端原圖
+          <span class="carrier-img-retry" role="button" tabindex="0"
+                onclick="event.preventDefault();event.stopPropagation();var a=this.closest('.carrier-img'),im=a.querySelector('img');a.classList.remove('is-missing');delete im.dataset.retry;im.src='${src}'+'&t='+Date.now();"><i class="ph-bold ph-arrow-clockwise"></i>重新載入</span>
+        </span>
       </a>`;
   }
 
@@ -1541,7 +1585,15 @@
 
     const total = brands.reduce((n, b) => n + b.models.reduce((m, md) => m + md.rows.length, 0), 0);
     if (!total) {
-      root.querySelector('.quote-body').innerHTML = '<div class="quote-error">報價資料格式無法辨識：請確認試算表欄位順序與原本相同（A~E 左半、G~J 右半）。</div>';
+      // 技術原因只記錄在主控台與 GA4，畫面上顯示給客人看的說法
+      console.warn('[報價單] 資料格式無法辨識：請確認試算表欄位順序與原本相同（A~E 左半、G~J 右半）');
+      window.hgTrack?.('quote_parse_error', { source });
+      root.querySelector('.quote-body').innerHTML = `<div class="quote-error">
+        <i class="ph ph-clock-countdown"></i>
+        <b>報價更新中</b>
+        <span>最新報價整理中，請稍後再重新整理，或直接 LINE 洽詢各區內勤業務。</span>
+        <button type="button" class="btn btn-accent btn-sm" onclick="event.stopPropagation();document.querySelector('.line-menu-btn')?.click();">LINE 洽詢報價</button>
+      </div>`;
       return;
     }
     document.getElementById('quoteDate').textContent = todayTW();   // 改顯示今天日期（試算表 A1 的日期不再顯示）
@@ -1934,7 +1986,9 @@ try {
   hero.classList.add('no-webgl');   // 無 WebGL：保留文案與光暈
   throw e;
 }
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+// 效能：手機螢幕像素密度高（常見 3 倍），上限 1.5 已經夠清楚，像素量約為 2 倍時的 56%
+const isSmall = window.matchMedia('(max-width: 900px)').matches;
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, isSmall ? 1.5 : 2));
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1.0;
@@ -2065,7 +2119,10 @@ function resize() {
   const visH = 2 * camera.position.z * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
   const visW = visH * camera.aspect;
   if (camera.aspect >= 1.05) {
-    layout.x = visW * 0.2;
+    // 手機中心固定在整個首頁寬度 70% 的位置；畫布只佔右側時，換算成畫布內的座標
+    const heroW = hero.clientWidth || w;
+    const f = (0.70 * heroW - canvas.offsetLeft) / w;   // 手機中心在畫布內的比例
+    layout.x = (f - 0.5) * visW;
     layout.y = 0;
     layout.s = Math.min(1.0, (visH * 0.74) / modelH);
   } else {
@@ -2170,8 +2227,9 @@ function pose(t) {
   const dt = Math.min(0.25, Math.max(0, t - lastT));  // 分頁切回來時避免一次跳太多
   lastT = t;
   updateSpring(dt);
-  pointer.x += (pointer.tx - pointer.x) * 0.04;
-  pointer.y += (pointer.ty - pointer.y) * 0.04;
+  const ease = 1 - Math.pow(0.96, dt * 60);   // 以時間換算的平滑係數：25 或 60 張/秒，跟隨速度都一樣
+  pointer.x += (pointer.tx - pointer.x) * ease;
+  pointer.y += (pointer.ty - pointer.y) * ease;
   const autoYaw = reduceMotion ? 0.42 : Math.sin(t * 0.28) * 0.62;
   const autoPitch = reduceMotion ? -0.1 : -0.1 + Math.sin(t * 0.19) * 0.06;
   rig.rotation.y = autoYaw + pointer.x * 0.12 + drag.yaw;
@@ -2181,26 +2239,70 @@ function pose(t) {
   rig.scale.setScalar(layout.s);
   rimCyan.position.set(-9 + Math.sin(t * 0.35) * 3, 4, -8);  // 輪廓光緩慢移動，反光沿邊緣流動
 }
-function renderOnce() { pose(clock.getElapsedTime()); renderer.render(scene, camera); }
+/* 動畫時間只在有畫的時候累加：暫停後恢復，手機會從原本的角度接著轉，不會突然跳一大段 */
+let animT = 0;
+function renderOnce() {
+  animT += Math.min(clock.getDelta(), 0.1);
+  pose(animT);
+  renderer.render(scene, camera);
+}
 
 /* 畫面外或分頁隱藏時暫停，省電省 GPU。
    減少動態模式下平常不跑迴圈，只在拖曳/回彈期間跑，回彈完成就停。 */
-let running = false, visible = true;
-function loop() {
+/* 效能設定
+   IDLE_FPS：沒拖曳時每秒畫幾張（自動慢慢轉，25 張看不出差別）；拖曳或回彈中改為全速，手感不變
+   IDLE_PAUSE_MS：多久沒有任何操作就暫停 3D（滑鼠移動、捲動、點擊、按鍵、觸控都算操作） */
+const IDLE_FPS = 25, FRAME_MS = 1000 / IDLE_FPS;
+const IDLE_PAUSE_MS = 20000;
+let running = false, visible = true, lastFrame = 0, idlePaused = false;
+let lastInteract = performance.now();
+function loop(now) {
   if (!running) return;
-  renderOnce();
-  if (reduceMotion && springSettled()) { running = false; return; }
+  const active = drag.active || !springSettled();
+  if (!active && now - lastInteract > IDLE_PAUSE_MS) {   // 太久沒操作：停在目前角度
+    running = false; idlePaused = true; return;
+  }
+  if (active || now - lastFrame >= FRAME_MS) {
+    // 對齊 40ms 節拍（60Hz 螢幕上會是 33/50ms 交替，平均剛好 25 張/秒）
+    lastFrame = active ? now : now - ((now - lastFrame) % FRAME_MS);
+    renderOnce();
+    if (reduceMotion && springSettled()) { running = false; return; }
+  }
   requestAnimationFrame(loop);
 }
 function start() {
   if (running || !visible || document.hidden) return;
   if (reduceMotion && springSettled()) { renderOnce(); return; }
+  clock.getDelta();            // 丟掉暫停期間的時間
+  lastFrame = 0;
   running = true; requestAnimationFrame(loop);
 }
-function kick() { start(); }
+/* 有任何操作就記錄時間；如果 3D 因閒置暫停，立刻恢復 */
+['pointermove', 'pointerdown', 'wheel', 'scroll', 'keydown', 'touchstart'].forEach(ev =>
+  addEventListener(ev, () => {
+    lastInteract = performance.now();
+    if (idlePaused) { idlePaused = false; start(); }
+  }, { passive: true }));
+function kick() { lastInteract = performance.now(); idlePaused = false; start(); }
 function stop() { running = false; }
 new IntersectionObserver(([e]) => { visible = e.isIntersecting; visible ? start() : stop(); }).observe(hero);
 document.addEventListener('visibilitychange', () => document.hidden ? stop() : start());
+</script>
+<!-- ══ 效能：搜尋欄的呼吸光只在出現在畫面上時播放（中古機、家電的搜尋欄是之後才產生的，用 MutationObserver 補上） ══ -->
+<script>
+(() => {
+  if (!('IntersectionObserver' in window)) {
+    document.querySelectorAll('.quote-search, .us-search').forEach(el => el.classList.add('glow-on'));
+    return;
+  }
+  const io = new IntersectionObserver(es => es.forEach(e => e.target.classList.toggle('glow-on', e.isIntersecting)));
+  const seen = new WeakSet();
+  const scan = () => document.querySelectorAll('.quote-search, .us-search').forEach(el => {
+    if (!seen.has(el)) { seen.add(el); io.observe(el); }
+  });
+  scan();
+  new MutationObserver(scan).observe(document.body, { childList: true, subtree: true });
+})();
 </script>
 <!-- ══ 頁面放太久自動重新整理：避免雲端報價更新了，畫面還是舊的 ══
      條件（任一成立）：開啟超過 12 小時，或已經跨日（過了午夜，日期會不對）
